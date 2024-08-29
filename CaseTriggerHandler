@@ -1,0 +1,77 @@
+public class CaseTriggerHandler {
+
+    
+    public static void afterInsert(List<Case> newList){
+        // Update the Account numbers    
+        updateAccountNubers(newList);
+    }
+    
+    public static void afterUpdate(Map<Id, Case> oldMap, Map<Id, Case> newMap){
+        
+        List<Case> casesForAccounts = new List<Case>();
+        // Iterate over the old cases to compare with the new cases
+        for(Case c: oldMap.values()){
+            if(newMap.containsKey(c.Id)){
+                if((c.isClosed == true && newMap.get(c.Id).isClosed == false) || (c.isClosed == false && newMap.get(c.Id).isClosed == true)){
+                    casesForAccounts.add(newMap.get(c.Id));
+                }
+            }
+        }
+        if(casesForAccounts.size() > 0){
+            // Update the Account numbers
+            updateAccountNubers(casesForAccounts);
+        }
+    }
+    
+    public static void afterDelete(List<Case> newList){   
+        // Update the Account numbers
+        updateAccountNubers(newList);
+    }
+    
+    public static void afterUnDelete(List<Case> newList){
+        // Update the Account numbers
+        updateAccountNubers(newList);
+    }
+    
+    private static void updateAccountNubers(List<Case> newList){
+         List<Id> accountIds = new List<Id>();
+        
+        // Populate accountIds list with IDs from cases in newList
+        for(Case c:newList){
+            if(c.AccountId != null){
+                accountIds.add(c.AccountId);
+            }
+        }
+        
+        
+        Map<Id, Account> accMap = new Map<Id, Account>([SELECT Id, Number_of_open_case__c, Number_of_close_case__c FROM Account WHERE Id IN: accountIds ]);
+        // Aggregate the count of open/closed cases
+        List<AggregateResult> aggList = [SELECT COUNT(Id) casesCount, AccountId, isClosed FROM Case WHERE AccountId IN: accountIds GROUP BY isClosed, AccountId ORDER BY AccountId, isClosed ];
+        
+        String prevAccId = '';
+        
+        // Iterate over the aggregation results to update the account's case numbers
+        for(AggregateResult ar: aggList){
+            
+            Boolean isClosed = (Boolean)ar.get('isClosed');
+            Integer count = (Integer)ar.get('casesCount');
+            
+            if(isClosed){
+                
+                accMap.get((String)ar.get('AccountId')).Number_of_close_case__c = count;
+                if(prevAccId != (String)ar.get('AccountId')){
+                    accMap.get((String)ar.get('AccountId')).Number_of_open_case__c = 0;
+                }
+            }else{
+                accMap.get((String)ar.get('AccountId')).Number_of_open_case__c = count;
+                accMap.get((String)ar.get('AccountId')).Number_of_close_case__c = 0;
+            }
+            // Set the current account ID as the previous ID for the next iteration
+            prevAccId = (String)ar.get('AccountId');
+        }
+        
+        if(accMap.size() > 0){
+            update accMap.values();
+        }
+    }
+}
