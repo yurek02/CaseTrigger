@@ -1,0 +1,15 @@
+trigger CaseTrigger on Case (after insert, after update, after delete, after undelete) {
+
+    if(Trigger.isAfter){
+        System.debug('Hello After');
+        if(Trigger.isInsert){
+            CaseTriggerHandler.afterInsert(Trigger.new);
+        }else if (Trigger.isUpdate){
+            CaseTriggerHandler.afterUpdate(Trigger.oldMap, Trigger.newMap);
+        }else if (Trigger.isDelete){
+            CaseTriggerHandler.afterDelete(Trigger.old);
+        }else if (Trigger.isUnDelete){
+            CaseTriggerHandler.afterUnDelete(Trigger.new);
+        }
+    }
+}
