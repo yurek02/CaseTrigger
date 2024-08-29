@@ -1,7 +1,7 @@
 trigger CaseTrigger on Case (after insert, after update, after delete, after undelete) {
 
     if(Trigger.isAfter){
-        System.debug('Hello After');
+        
         if(Trigger.isInsert){
             CaseTriggerHandler.afterInsert(Trigger.new);
         }else if (Trigger.isUpdate){
