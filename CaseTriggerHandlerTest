@@ -1,0 +1,104 @@
+@isTest
+public class CaseTriggerHandlerTest {
+
+    @testSetup static void setup(){
+        Account acc1 = new Account(Name='Test1');
+        insert acc1;
+        
+        Account acc2 = new Account(Name='Test2');
+        insert acc2;
+        
+        List<Case> newTestCasesList = new List<Case>(); 
+        Boolean flag = true;
+        
+        for(Integer i = 0; i < 4; i++){
+            Case c = new Case();
+            if(flag){
+                c.Status = 'Closed';
+                c.AccountId = acc1.Id;
+            }else{
+                c.Status = 'Working';
+                c.AccountId = acc2.Id;
+            }
+            newTestCasesList.add(c);
+			flag = !flag;
+        }
+        insert newTestCasesList;
+    }
+    
+    @isTest 
+    static void afterInsertTest(){
+         Account acc = [SELECT Id, Number_of_close_case__c, Number_of_open_case__c FROM Account LIMIT 1];
+        List<Case> newTestCasesList = new List<Case>(); 
+        Boolean flag = true;
+        
+        for(Integer i = 0; i < 4; i++){
+            Case c = new Case();
+            if(flag){
+                c.Status = 'Closed';
+                c.AccountId = acc.Id;
+            }else{
+                c.Status = 'Working';
+                c.AccountId = acc.Id;
+            }
+            newTestCasesList.add(c);
+			flag = !flag;
+        }
+        Test.startTest();
+        insert newTestCasesList;
+        Test.stopTest();
+        
+        Account acc1 = [SELECT Id, Number_of_close_case__c, Number_of_open_case__c FROM Account Where Id =: acc.Id LIMIT 1];
+        System.assertEquals(2, acc1.Number_of_open_case__c);
+        System.assertEquals(4, acc1.Number_of_close_case__c);
+    }
+    
+    @isTest 
+    static void afterUpdateTest(){
+        List<Case> caseListTest = [Select Id, Status From Case];
+         for(Case c : caseListTest){
+            if(c.Status == 'Closed'){
+                c.Status = 'Working';
+            }
+        }
+        Test.startTest();
+       	update caseListTest;
+        Test.stopTest();
+        
+        Account acc = [SELECT Id, Number_of_close_case__c, Number_of_open_case__c FROM Account LIMIT 1];
+        
+        System.assertEquals(2, acc.Number_of_open_case__c);
+        System.assertEquals(0, acc.Number_of_close_case__c);
+    }
+    
+    @isTest
+    static void afterDeleteTest(){
+        Account accForCase = [SELECT Id, Number_of_close_case__c, Number_of_open_case__c FROM Account LIMIT 1];
+        List<Case> caseListTest = [Select Id, Status, AccountId From Case Where AccountId =: accForCase.Id];
+        
+        Test.startTest();
+       	delete caseListTest;
+        Test.stopTest();
+        
+        Account acc = [SELECT Id, Number_of_close_case__c, Number_of_open_case__c FROM Account Where Id =: accForCase.Id LIMIT 1];
+        
+        System.assertEquals(0, acc.Number_of_open_case__c);
+        System.assertEquals(2, acc.Number_of_close_case__c);
+    }
+    
+    @isTest
+    static void afterUnDeleteTest(){
+        Account accForCase = [SELECT Id, Number_of_close_case__c, Number_of_open_case__c FROM Account LIMIT 1];
+        List<Case> caseListTest = [Select Id, Status, AccountId From Case Where AccountId =: accForCase.Id];        
+        
+        Test.startTest();
+       	delete caseListTest;
+        undelete caseListTest;
+        Test.stopTest();
+        
+        Account acc = [SELECT Id, Number_of_close_case__c, Number_of_open_case__c FROM Account Where Id =: accForCase.Id LIMIT 1];
+        
+        System.assertEquals(0, acc.Number_of_open_case__c);
+        System.assertEquals(2, acc.Number_of_close_case__c);
+    }
+}
